@@ -45,7 +45,7 @@ class PayPalHandler:
         return self.invoice_manager.get_invoice_details(invoice_id).json()
     
     def get_paypal_id_from_local_id(self, local_id):
-        return self.database.get_paypal_id_from_local_id(local_id)
+        return self.database.get_paypal_id_from_local_id(local_id)[0]
     
 class DiscordBot(commands.Bot):
     def __init__(self):
@@ -105,12 +105,68 @@ def main():
 
         await interaction.followup.send(embed=embed)
 
-    @bot.tree.command(name="create_invoice", description="Generate a PayPal invoice.", guild=bot.MAIN_GUILD)
+    @bot.tree.command(name="check_invoice", description="Get PayPal invoice information.", guild=bot.MAIN_GUILD)
     @app_commands.describe(invoice_id="Either the PayPal ID or Local ID")
-    async def check_invoice(interaction: Interaction, ):
+    async def check_invoice(interaction: Interaction, invoice_id: str):
         await interaction.response.defer(thinking=True)
 
-        await interaction.followup.send(response)
+        if invoice_id.startswith(os.getenv("INVOICE_PREFIX")):
+            invoice_id = paypal.get_paypal_id_from_local_id(
+                invoice_id.removeprefix(os.getenv("INVOICE_PREFIX"))
+            )
+
+        response = paypal.get_invoice_information(invoice_id)
+
+        status = response.get("status", "UNKNOWN").upper()
+        details = response.get("detail", {})
+        recipient = (
+            response.get("primary_recipients", [{}])[0]
+            .get('billing_info')
+            .get("email_address", "N/A")
+        )
+        amount = response.get("amount", {}).get("value", "0.00")
+        currency = response.get("amount", {}).get("currency_code", os.getenv("CURRENCY_CODE"))
+        item_list = response.get("items", [])
+        item_names = ", ".join([item.get("name", "Unnamed Item") for item in item_list])
+
+        if status == "PAID":
+            display_status = "Paid"
+            color = discord.Color.green()
+        elif status == "PARTIALLY_PAID":
+            display_status = "Partially Paid"
+            color = discord.Color.orange()
+        else:
+            display_status = "Not Paid"
+            color = discord.Color.red()
+
+        metadata = details.get("metadata", {})
+        invoice_url = metadata.get(
+            "recipient_view_url",
+            metadata.get("invoicer_view_url", "https://www.paypal.com/invoice")
+        )
+
+        embed = discord.Embed(
+            title=f"📄 Invoice {display_status}",
+            description=(
+                f"**PayPal ID:** `{invoice_id}`\n"
+                f"**Recipient:** {recipient}\n"
+                f"**Items:** {item_names}\n"
+                f"**Amount:** `{amount} {currency}`"
+            ),
+            color=color
+        )
+
+        embed.add_field(
+            name="🔗 View on PayPal",
+            value=f"[Click here to open invoice]({invoice_url})",
+            inline=False
+        )
+
+        embed.set_footer(text=f"Checked by {interaction.user.display_name}")
+        embed.set_thumbnail(url="https://www.paypalobjects.com/webstatic/icon/pp258.png")
+
+        await interaction.followup.send(embed=embed)
+
     
     bot.run(os.getenv('DISCORD_BOT_TOKEN'))
 
