@@ -44,6 +44,9 @@ class PayPalHandler:
     def get_invoice_information(self, invoice_id):
         return self.invoice_manager.get_invoice_details(invoice_id).json()
     
+    def get_paypal_id_from_local_id(self, local_id):
+        return self.database.get_paypal_id_from_local_id(local_id)
+    
 class DiscordBot(commands.Bot):
     def __init__(self):
         super().__init__(intents=Intents.default(), help_command=None, command_prefix=None)
@@ -101,6 +104,13 @@ def main():
         embed.set_thumbnail(url="https://www.paypalobjects.com/webstatic/icon/pp258.png")
 
         await interaction.followup.send(embed=embed)
+
+    @bot.tree.command(name="create_invoice", description="Generate a PayPal invoice.", guild=bot.MAIN_GUILD)
+    @app_commands.describe(invoice_id="Either the PayPal ID or Local ID")
+    async def check_invoice(interaction: Interaction, ):
+        await interaction.response.defer(thinking=True)
+
+        await interaction.followup.send(response)
     
     bot.run(os.getenv('DISCORD_BOT_TOKEN'))
 
