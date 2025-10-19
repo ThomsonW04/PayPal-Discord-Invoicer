@@ -2,8 +2,8 @@ from controllers.DataBaseController import DataBaseContoller
 from controllers.PayPalInvoiceController import PayPalInvoiceController
 from dotenv import load_dotenv
 import os
-import discord
-from discord import app_commands
+from discord.ext import commands
+from discord import app_commands, Intents
 
 load_dotenv()
 
@@ -43,12 +43,13 @@ class PayPalHandler:
     def get_invoice_information(self, invoice_id):
         return self.invoice_manager.get_invoice_details(invoice_id).json()
     
-class DiscordBot(discord.Bot):
+class DiscordBot(commands.Bot):
     def __init__(self):
-        super().__init__(intents=discord.Intents.default())
+        super().__init__(intents=Intents.default(), help_command=None, command_prefix=None)
     
 def main():
-    pass
+    bot = DiscordBot()
+    bot.run(os.getenv('DISCORD_BOT_TOKEN'))
 
 if __name__ == "__main__":
     main()
