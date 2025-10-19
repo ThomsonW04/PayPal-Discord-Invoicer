@@ -1,5 +1,5 @@
 # How to use
-## Please begin with building a Virtual Environment and ensure the following are installed with pip:
+## Please begin with building a Virtual Environment and ensure the following are installed with pip (via the virtual environment:
 - discord.py
 - requests
 - dotenv
@@ -13,4 +13,5 @@
 - Run the migrations in the migration folder. Please run 0 first and then build upto the file starting with the highest number. (If you ever use a later released version you will not need to rebuild the database from the start, just run new numbers)
 
 ## Running the app
+- Ensure you're in the Virtual Environment you made
 - python3 main.py
